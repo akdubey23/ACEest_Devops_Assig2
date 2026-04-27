@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Syntax check (compile)
+        run: python -m compileall -q app.py
+
+      - name: Run tests
+        run: |
+          mkdir -p test-results allure-results
+          python -m pytest tests/ -v --tb=short \
+            --junitxml=test-results/junit.xml \
+            --alluredir=allure-results \
+            --html=test-results/pytest-report.html --self-contained-html
+          python scripts/build_test_dashboard.py
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            test-results/
+            allure-results/
+
+      - name: Build Docker image
+        run: docker build -t aceest-fitness-api:ci .
