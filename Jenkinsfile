@@ -1,10 +1,28 @@
-// ACEest Fitness API — simple CI-style pipeline for coursework
+// ACEest Fitness API - Assignment 2 CI/CD pipeline.
 // Works on Windows Jenkins (bat) and Linux agents (sh).
-// Windows: scripts/jenkins-windows-ci.cmd finds Python (service account has no user PATH).
-// Optional: set job/node env PYTHON_JENKINS=C:\Path\to\python.exe if discovery still fails.
+// Manual Jenkins setup before enabling optional stages:
+// - SonarQube Scanner + SonarQube server named SONARQUBE_ENV (default: "SonarQube")
+// - Docker Hub username/repository in DOCKERHUB_IMAGE and credentials id in DOCKERHUB_CREDENTIALS_ID
+// - kubectl context pointing at Minikube/Kubernetes before KUBE_DEPLOY_ENABLED=true
 
 pipeline {
     agent any
+
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+
+    environment {
+        APP_NAME = 'aceest-fitness-api'
+        LOCAL_IMAGE = 'aceest-fitness-api'
+        DOCKERHUB_IMAGE = 'akanksha2402/aceest-fitness-api'
+        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials'
+        PUSH_IMAGE = 'false'
+        SONARQUBE_ENABLED = 'false'
+        SONARQUBE_ENV = 'SonarQube'
+        KUBE_DEPLOY_ENABLED = 'false'
+        KUBE_NAMESPACE = 'aceest'
+    }
 
     stages {
         stage('Checkout') {
@@ -35,6 +53,7 @@ pipeline {
                             python3 -m pytest tests/ -v --tb=short \\
                               --junitxml=test-results/junit.xml \\
                               --alluredir=allure-results \\
+                              --cov=app --cov-report=xml:test-results/coverage.xml \\
                               --html=test-results/pytest-report.html --self-contained-html
                             PYEXIT=$?
                             python3 scripts/build_test_dashboard.py || true
@@ -47,15 +66,53 @@ pipeline {
             }
         }
 
+        stage('SonarQube analysis') {
+            when {
+                expression { return env.SONARQUBE_ENABLED == 'true' }
+            }
+            steps {
+                script {
+                    withSonarQubeEnv("${env.SONARQUBE_ENV}") {
+                        if (isUnix()) {
+                            sh 'sonar-scanner'
+                        } else {
+                            bat 'sonar-scanner'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube quality gate') {
+            when {
+                expression { return env.SONARQUBE_ENABLED == 'true' }
+            }
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Containerized tests') {
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh "docker build --target test -t ${env.LOCAL_IMAGE}:test ."
+                    } else {
+                        bat "docker build --target test -t %LOCAL_IMAGE%:test ."
+                    }
+                }
+            }
+        }
+
         stage('Docker build') {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'docker build -t aceest-fitness-api:jenkins .'
-                        sh 'docker tag aceest-fitness-api:jenkins aceest-fitness-api:staging'
+                        sh "docker build --target runtime -t ${env.LOCAL_IMAGE}:jenkins -t ${env.LOCAL_IMAGE}:staging -t ${env.DOCKERHUB_IMAGE}:${env.BUILD_NUMBER} -t ${env.DOCKERHUB_IMAGE}:latest ."
                     } else {
-                        bat 'docker build -t aceest-fitness-api:jenkins .'
-                        bat 'docker tag aceest-fitness-api:jenkins aceest-fitness-api:staging'
+                        bat "docker build --target runtime -t %LOCAL_IMAGE%:jenkins -t %LOCAL_IMAGE%:staging -t %DOCKERHUB_IMAGE%:%BUILD_NUMBER% -t %DOCKERHUB_IMAGE%:latest ."
                     }
                 }
             }
@@ -97,12 +154,52 @@ pipeline {
                 }
             }
         }
+
+        stage('Push Docker image') {
+            when {
+                expression { return env.PUSH_IMAGE == 'true' }
+            }
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS_ID) {
+                        if (isUnix()) {
+                            sh "docker push ${env.DOCKERHUB_IMAGE}:${env.BUILD_NUMBER}"
+                            sh "docker push ${env.DOCKERHUB_IMAGE}:latest"
+                        } else {
+                            bat "docker push %DOCKERHUB_IMAGE%:%BUILD_NUMBER%"
+                            bat "docker push %DOCKERHUB_IMAGE%:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            when {
+                expression { return env.KUBE_DEPLOY_ENABLED == 'true' }
+            }
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh """
+                            kubectl apply -k k8s/base
+                            kubectl -n ${env.KUBE_NAMESPACE} set image deployment/${env.APP_NAME} ${env.APP_NAME}=${env.DOCKERHUB_IMAGE}:${env.BUILD_NUMBER}
+                            kubectl -n ${env.KUBE_NAMESPACE} rollout status deployment/${env.APP_NAME} --timeout=120s
+                        """
+                    } else {
+                        bat 'kubectl apply -k k8s/base'
+                        bat "kubectl -n %KUBE_NAMESPACE% set image deployment/%APP_NAME% %APP_NAME%=%DOCKERHUB_IMAGE%:%BUILD_NUMBER%"
+                        bat "kubectl -n %KUBE_NAMESPACE% rollout status deployment/%APP_NAME% --timeout=120s"
+                    }
+                }
+            }
+        }
     }
 
     post {
         always {
             junit testResults: 'test-results/junit.xml', allowEmptyResults: true
-            archiveArtifacts artifacts: 'test-results/*.html,allure-results/**/*', allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: 'test-results/*.html,test-results/*.xml,allure-results/**/*', allowEmptyArchive: true, fingerprint: true
         }
     }
 }

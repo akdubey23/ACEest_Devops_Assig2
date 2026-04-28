@@ -3,5 +3,6 @@ __pycache__/
 *.db
 .git
 .gitignore
-tests/
 *.md
+test-results/
+allure-results/
