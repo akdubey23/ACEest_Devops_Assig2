@@ -12,16 +12,28 @@ pipeline {
         pollSCM('H/5 * * * *')
     }
 
+    parameters {
+        booleanParam(name: 'SONARQUBE_ENABLED', defaultValue: false, description: 'Run SonarQube analysis and enforce the quality gate')
+        booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: 'Push the Jenkins-built image tags to Docker Hub')
+        booleanParam(name: 'KUBE_DEPLOY_ENABLED', defaultValue: false, description: 'Deploy the pushed image to Kubernetes')
+        string(name: 'SONARQUBE_ENV', defaultValue: 'SonarQube', description: 'Jenkins SonarQube server configuration name')
+        string(name: 'SONAR_SCANNER_TOOL', defaultValue: 'SonarScanner', description: 'Jenkins SonarQube Scanner tool installation name')
+        string(name: 'DOCKERHUB_IMAGE', defaultValue: 'akanksha2402/aceest-fitness-api', description: 'Docker Hub image repository')
+        string(name: 'DOCKERHUB_CREDENTIALS_ID', defaultValue: 'dockerhub-credentials', description: 'Jenkins Docker Hub credentials ID')
+        string(name: 'KUBE_NAMESPACE', defaultValue: 'aceest', description: 'Kubernetes namespace for optional deployment')
+    }
+
     environment {
         APP_NAME = 'aceest-fitness-api'
         LOCAL_IMAGE = 'aceest-fitness-api'
-        DOCKERHUB_IMAGE = 'akanksha2402/aceest-fitness-api'
-        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials'
-        PUSH_IMAGE = 'false'
-        SONARQUBE_ENABLED = 'false'
-        SONARQUBE_ENV = 'SonarQube'
-        KUBE_DEPLOY_ENABLED = 'false'
-        KUBE_NAMESPACE = 'aceest'
+        DOCKERHUB_IMAGE = "${params.DOCKERHUB_IMAGE ?: 'akanksha2402/aceest-fitness-api'}"
+        DOCKERHUB_CREDENTIALS_ID = "${params.DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
+        PUSH_IMAGE = "${params.PUSH_IMAGE ?: false}"
+        SONARQUBE_ENABLED = "${params.SONARQUBE_ENABLED ?: false}"
+        SONARQUBE_ENV = "${params.SONARQUBE_ENV ?: 'SonarQube'}"
+        SONAR_SCANNER_TOOL = "${params.SONAR_SCANNER_TOOL ?: 'SonarScanner'}"
+        KUBE_DEPLOY_ENABLED = "${params.KUBE_DEPLOY_ENABLED ?: false}"
+        KUBE_NAMESPACE = "${params.KUBE_NAMESPACE ?: 'aceest'}"
     }
 
     stages {
@@ -72,11 +84,12 @@ pipeline {
             }
             steps {
                 script {
+                    def scannerHome = tool "${env.SONAR_SCANNER_TOOL}"
                     withSonarQubeEnv("${env.SONARQUBE_ENV}") {
                         if (isUnix()) {
-                            sh 'sonar-scanner'
+                            sh "${scannerHome}/bin/sonar-scanner"
                         } else {
-                            bat 'sonar-scanner'
+                            bat "\"${scannerHome}\\bin\\sonar-scanner.bat\""
                         }
                     }
                 }
