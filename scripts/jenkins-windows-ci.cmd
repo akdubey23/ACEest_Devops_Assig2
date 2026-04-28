@@ -31,7 +31,7 @@ exit /b %ERRORLEVEL%
 :test
 if not exist test-results mkdir test-results
 if not exist allure-results mkdir allure-results
-"%RESOLVED_PY%" -m pytest tests/ -v --tb=short --junitxml=test-results/junit.xml --alluredir=allure-results --html=test-results/pytest-report.html --self-contained-html
+"%RESOLVED_PY%" -m pytest tests/ -v --tb=short --junitxml=test-results/junit.xml --alluredir=allure-results --cov=app --cov-report=xml:test-results/coverage.xml --html=test-results/pytest-report.html --self-contained-html
 set PYEXIT=%ERRORLEVEL%
 "%RESOLVED_PY%" scripts\build_test_dashboard.py
 exit /b %PYEXIT%
