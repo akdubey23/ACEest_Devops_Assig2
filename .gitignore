@@ -1,2 +1,6 @@
 test-results/
 allure-results/
+__pycache__/
+*.pyc
+*.db
+.coverage
