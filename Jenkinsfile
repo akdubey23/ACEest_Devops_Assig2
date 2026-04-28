@@ -13,8 +13,8 @@ pipeline {
     }
 
     parameters {
-        booleanParam(name: 'SONARQUBE_ENABLED', defaultValue: false, description: 'Run SonarQube analysis and enforce the quality gate')
-        booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: 'Push the Jenkins-built image tags to Docker Hub')
+        booleanParam(name: 'SONARQUBE_ENABLED', defaultValue: true, description: 'Run SonarQube analysis and enforce the quality gate')
+        booleanParam(name: 'PUSH_IMAGE', defaultValue: true, description: 'Push the Jenkins-built image tags to Docker Hub')
         booleanParam(name: 'KUBE_DEPLOY_ENABLED', defaultValue: false, description: 'Deploy the pushed image to Kubernetes')
         string(name: 'SONARQUBE_ENV', defaultValue: 'SonarQube', description: 'Jenkins SonarQube server configuration name')
         string(name: 'SONAR_SCANNER_TOOL', defaultValue: 'SonarScanner', description: 'Jenkins SonarQube Scanner tool installation name')
