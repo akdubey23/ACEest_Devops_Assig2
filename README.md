@@ -2,6 +2,8 @@
 
 Flask + SQLite REST API for gym operations: programs, clients, workouts, analytics (adherence, weight, BMI), CSV/PDF export, admin login, rule-based “AI” weekly plans, and membership fields. Built for BITS-style DevOps coursework (Git, GitHub Actions, Jenkins, Docker).
 
+Assignment 2 extends the Assignment 1 baseline from `https://github.com/akdubey23/ACEest_Devops` and publishes the CI/CD deliverables in `https://github.com/akdubey23/ACEest_Devops_Assig2`.
+
 ---
 
 ## Quick start
@@ -116,12 +118,45 @@ List locally: `git tag -l -n1`.
 
 ---
 
-## CI/CD
+## Assignment 2 CI/CD
 
 | System | What it does |
 |--------|----------------|
-| **GitHub Actions** (`.github/workflows/main.yml`) | On push / PR: deps, `compileall`, pytest (+ reports), upload artifacts, `docker build`. |
-| **Jenkins** (`Jenkinsfile`) | Checkout, install (Windows uses `scripts/jenkins-windows-ci.cmd` + optional `PYTHON_JENKINS`), test, Docker build, **Staging** smoke (`/health` on a short-lived container on host port **5099**). |
+| **GitHub Actions** (`.github/workflows/main.yml`) | On push / PR: deps, `compileall`, pytest + coverage/reports, optional SonarQube scan, Docker test image, runtime image, optional Docker Hub push. |
+| **Jenkins** (`Jenkinsfile`) | SCM polling, checkout, install (Windows uses `scripts/jenkins-windows-ci.cmd` + optional `PYTHON_JENKINS`), pytest + coverage/reports, optional SonarQube quality gate, containerized tests, Docker build, staging smoke, optional Docker Hub push, optional Kubernetes deploy. |
+| **SonarQube** (`sonar-project.properties`) | Static analysis project configuration and coverage import from `test-results/coverage.xml`. |
+| **Kubernetes** (`k8s/`) | Minikube-ready base deployment plus rolling, blue-green, canary, shadow, and A/B strategy manifests. |
+
+### Jenkins knobs
+
+The Jenkinsfile is safe to run without external accounts first. Enable the external stages after setup:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SONARQUBE_ENABLED` | `false` | Set `true` after configuring Jenkins SonarQube server name `SonarQube` and `sonar-scanner`. |
+| `DOCKERHUB_IMAGE` | `akanksha2402/aceest-fitness-api` | Replace with your Docker Hub repository. |
+| `PUSH_IMAGE` | `false` | Set `true` after creating Jenkins credentials id `dockerhub-credentials`. |
+| `KUBE_DEPLOY_ENABLED` | `false` | Set `true` after `kubectl` points to Minikube/Kubernetes. |
+
+### Kubernetes quick deploy
+
+```powershell
+minikube start
+.\scripts\k8s-deploy.ps1 -Image "docker.io/<dockerhub-user>/aceest-fitness-api:<tag>"
+minikube service aceest-fitness-api -n aceest
+```
+
+Strategy examples:
+
+```powershell
+.\scripts\k8s-deploy.ps1 -Strategy rolling
+.\scripts\k8s-deploy.ps1 -Strategy blue-green
+.\scripts\k8s-deploy.ps1 -Strategy canary
+.\scripts\k8s-deploy.ps1 -Strategy shadow
+.\scripts\k8s-deploy.ps1 -Strategy ab
+```
+
+See `docs/ASSIGNMENT2_REPORT.md` for the 2-3 page report, tool dependency checklist, manual setup steps, and rollback commands.
 
 ---
 
