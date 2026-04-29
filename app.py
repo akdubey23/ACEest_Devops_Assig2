@@ -328,6 +328,35 @@ def home():
 
 @app.get("/health")
 def health():
+    if request.accept_mimetypes.best_match(["application/json", "text/html"]) == "text/html":
+        return Response(
+            """
+            <!doctype html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>ACEest Fitness API Health</title>
+                <style>
+                  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f8fb; color: #172033; }
+                  main { max-width: 720px; margin: 10vh auto; padding: 32px; background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+                  .badge { display: inline-block; padding: 8px 12px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 700; }
+                  h1 { margin: 18px 0 8px; }
+                  code { background: #eef2ff; padding: 2px 6px; border-radius: 6px; }
+                </style>
+              </head>
+              <body>
+                <main>
+                  <span class="badge">Healthy</span>
+                  <h1>ACEest Fitness & Gym API is running</h1>
+                  <p>The deployment is live and responding successfully.</p>
+                  <p>Machine-readable health checks can request <code>application/json</code> and receive <code>{"status":"ok"}</code>.</p>
+                </main>
+              </body>
+            </html>
+            """,
+            mimetype="text/html",
+        )
     return jsonify({"status": "ok"})
 
 
