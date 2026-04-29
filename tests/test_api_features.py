@@ -28,6 +28,24 @@ class TestDiscoveryAndHealth:
         assert r.status_code == 200
         assert r.get_json()["status"] == "ok"
 
+    @allure.story("Liveness")
+    @allure.title("Health endpoint renders a browser-friendly page")
+    def test_health_html_for_browser(self, aceest_client):
+        r = aceest_client.get("/health", headers={"Accept": "text/html"})
+        assert r.status_code == 200
+        assert "text/html" in r.headers["Content-Type"]
+        html = r.get_data(as_text=True)
+        assert "ACEest Fitness & Gym API is running" in html
+        assert "Healthy" in html
+
+    @allure.story("Liveness")
+    @allure.title("Health endpoint keeps JSON response for automation")
+    def test_health_json_for_automation(self, aceest_client):
+        r = aceest_client.get("/health", headers={"Accept": "application/json"})
+        assert r.status_code == 200
+        assert "application/json" in r.headers["Content-Type"]
+        assert r.get_json() == {"status": "ok"}
+
 
 @allure.feature("Programs catalog")
 class TestProgramsCatalog:
