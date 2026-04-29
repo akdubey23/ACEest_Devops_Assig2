@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
         - name: aceest-fitness-api
-          image: docker.io/akanksha2402/aceest-fitness-api:next
+          image: docker.io/akanksha2402/aceest-fitness-api:latest
           ports:
             - containerPort: 5000
 ---

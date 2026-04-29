@@ -15,11 +15,12 @@ pipeline {
     parameters {
         booleanParam(name: 'SONARQUBE_ENABLED', defaultValue: true, description: 'Run SonarQube analysis and enforce the quality gate')
         booleanParam(name: 'PUSH_IMAGE', defaultValue: true, description: 'Push the Jenkins-built image tags to Docker Hub')
-        booleanParam(name: 'KUBE_DEPLOY_ENABLED', defaultValue: false, description: 'Deploy the pushed image to Kubernetes')
+        booleanParam(name: 'KUBE_DEPLOY_ENABLED', defaultValue: true, description: 'Deploy the pushed image to Kubernetes')
         string(name: 'SONARQUBE_ENV', defaultValue: 'SonarQube', description: 'Jenkins SonarQube server configuration name')
         string(name: 'SONAR_SCANNER_TOOL', defaultValue: 'SonarScanner', description: 'Jenkins SonarQube Scanner tool installation name')
         string(name: 'DOCKERHUB_IMAGE', defaultValue: 'akanksha2402/aceest-fitness-api', description: 'Docker Hub image repository')
         string(name: 'DOCKERHUB_CREDENTIALS_ID', defaultValue: 'dockerhub-credentials', description: 'Jenkins Docker Hub credentials ID')
+        string(name: 'KUBECONFIG_PATH', defaultValue: 'C:\\Users\\Akanksha\\.kube\\config', description: 'Kubeconfig path available to the Jenkins Windows service')
         string(name: 'KUBE_NAMESPACE', defaultValue: 'aceest', description: 'Kubernetes namespace for optional deployment')
     }
 
@@ -33,6 +34,7 @@ pipeline {
         SONARQUBE_ENV = "${params.SONARQUBE_ENV ?: 'SonarQube'}"
         SONAR_SCANNER_TOOL = "${params.SONAR_SCANNER_TOOL ?: 'SonarScanner'}"
         KUBE_DEPLOY_ENABLED = "${params.KUBE_DEPLOY_ENABLED ?: false}"
+        KUBECONFIG = "${params.KUBECONFIG_PATH ?: 'C:\\Users\\Akanksha\\.kube\\config'}"
         KUBE_NAMESPACE = "${params.KUBE_NAMESPACE ?: 'aceest'}"
     }
 
