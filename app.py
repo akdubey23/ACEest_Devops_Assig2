@@ -924,6 +924,8 @@ def membership_status():
     end = row["membership_end"] or ""
     return jsonify({"client": client_name, "membership_status": status, "membership_end": end})
 
+# Phase 9 (Aceestver-3.2.1.py)
+# -------------------------#
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=os.environ.get("FLASK_DEBUG") == "1")
