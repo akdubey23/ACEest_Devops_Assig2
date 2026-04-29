@@ -12,6 +12,10 @@ pipeline {
         pollSCM('H/5 * * * *')
     }
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     parameters {
         booleanParam(name: 'SONARQUBE_ENABLED', defaultValue: true, description: 'Run SonarQube analysis and enforce the quality gate')
         booleanParam(name: 'PUSH_IMAGE', defaultValue: true, description: 'Push the Jenkins-built image tags to Docker Hub')
@@ -41,7 +45,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                retry(3) {
+                    checkout scm
+                }
             }
         }
 
