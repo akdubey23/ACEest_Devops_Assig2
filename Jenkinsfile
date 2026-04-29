@@ -174,13 +174,17 @@ pipeline {
             }
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS_ID) {
+                    withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS_ID, usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
                         if (isUnix()) {
+                            sh 'echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin'
                             sh "docker push ${env.DOCKERHUB_IMAGE}:${env.BUILD_NUMBER}"
                             sh "docker push ${env.DOCKERHUB_IMAGE}:latest"
+                            sh 'docker logout || true'
                         } else {
+                            bat 'echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin'
                             bat "docker push %DOCKERHUB_IMAGE%:%BUILD_NUMBER%"
                             bat "docker push %DOCKERHUB_IMAGE%:latest"
+                            bat 'docker logout'
                         }
                     }
                 }
